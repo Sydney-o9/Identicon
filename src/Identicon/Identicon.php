@@ -7,6 +7,17 @@ namespace Identicon;
  */
 class Identicon
 {
+
+  /**
+   * @var int The number of pixels
+   */
+    const NB_OF_PIXELS = 5;
+
+  /**
+   * @var int The border ratio
+   */
+    const BORDER_RATIO = 0.2;
+
     /**
      * @var string
      */
@@ -42,7 +53,7 @@ class Identicon
     public function setSize($size)
     {
         $this->size = $size;
-        $this->pixelRatio = round($size / 5);
+        $this->pixelRatio = round($size / self::NB_OF_PIXELS);
 
         return $this;
     }
@@ -58,7 +69,7 @@ class Identicon
     }
 
     /**
-     * Generate a hash fron the original string
+     * Generate a hash from the original string
      *
      * @param string $string
      *
@@ -137,40 +148,68 @@ class Identicon
         return $this->arrayOfSquare;
     }
 
+    /**
+     * Generate a $x x $y image filled in with $color
+     *
+     */
+    function imageCreateColor($x, $y, $color) {
+
+        $im = imagecreatetruecolor($x, $y);
+        $c = imagecolorallocate($im, $color[0], $color[1], $color[2]);
+        imagefill($im, 0, 0, $c);
+
+        return $im;
+    }
 
     /**
      * Generate the Identicon image
      *
      * @param string  $string
      * @param integer $size
-     * @param string $hexaColor
+     * @param array of colors (hexa or rgb)
+     * @param string $color Background color (hexa or rgb)
      */
-    private function generateImage($string, $size, $color)
+    public function generateImage($string, $size, $colors = array(),  $colorBackground = null )
     {
         $this->setString($string);
-        $this->setSize($size);
+        //TODO: dicrease size by 10%
+        $drawableSize = $size - (self::BORDER_RATIO * $size);
+        $this->setSize($drawableSize);
 
-        // prepare the image
-        $image = imagecreatetruecolor($this->pixelRatio * 5, $this->pixelRatio * 5);
-        $background = imagecolorallocate($image, 0, 0, 0);
-        imagecolortransparent($image, $background);
-
-        // prepage the color
-        if (null !== $color) {
+        /** Prepare the image */
+        if ( !empty($colors) ) {
+            $color = $colors[ rand( 0, count($colors)-1  ) ];
+            $color = $this->transformHexaColorToRGBColor($color);
             $this->setColor($color);
         }
-        $color = imagecolorallocate($image, $this->color[0], $this->color[1], $this->color[2]);
+
+        $image = $this->imageCreateColor($drawableSize, $drawableSize, $this->color);
+
+        /** Apply background color */
+        if ( is_null($colorBackground)) {
+          $colorBackground = '#ffffff';
+        }
+        $colorBackground = $this->transformHexaColorToRGBColor($colorBackground);
+
+        $bgColor = imagecolorallocate($image, $colorBackground[0], $colorBackground[1], $colorBackground[2]);
 
         // draw the content
         foreach ($this->arrayOfSquare as $lineKey => $lineValue) {
             foreach ($lineValue as $colKey => $colValue) {
-                if (true === $colValue) {
-                    imagefilledrectangle($image, $colKey * $this->pixelRatio, $lineKey * $this->pixelRatio, ($colKey + 1) * $this->pixelRatio, ($lineKey + 1) * $this->pixelRatio, $color);
-                }
+              if (true === $colValue) {
+                  imagefilledrectangle($image, $colKey * $this->pixelRatio, $lineKey * $this->pixelRatio, ($colKey + 1) * $this->pixelRatio, ($lineKey + 1) * $this->pixelRatio, $bgColor);
+              }
             }
         }
 
-        imagepng($image);
+        /** Prepare the container image with given dimensions */
+        $containerImage = $this->imageCreateColor($size, $size, $colorBackground);
+
+        $margin = ( $size - ( (1 - self::BORDER_RATIO) * $size) ) / 2;
+        imagecopymerge($containerImage, $image, $margin, $margin, 0, 0, $drawableSize, $drawableSize, 75);
+
+        return imagepng($containerImage);
+
     }
 
     /**
@@ -213,12 +252,35 @@ class Identicon
      *
      * @param string  $string
      * @param integer $size
-     * @param string $hexaColor
+     * @param array of colors (hexa or rgb)
+     * @param string $color Background color (hexa or rgb)
      */
-    public function displayImage($string, $size = 64, $hexaColor = null)
+    public function displayImage($string, $size = 64, $colors = array(),  $colorBackground = null )
     {
         header("Content-Type: image/png");
-        $this->generateImage($string, $size, $hexaColor);
+        $this->generateImage($string, $size, $colors, $colorBackground);
+    }
+
+
+    /**
+     * Transform hexadecimal color into RGB array
+     *
+     * @return arrray
+     */
+    public function transformHexaColorToRGBColor($hexaColor)
+    {
+        if (is_array($hexaColor)) {
+             $rgbColor = $hexaColor;
+        } else {
+            if (false !== strpos($hexaColor, '#')) {
+                $hexaColor = substr($hexaColor, 1);
+            }
+            $rgbColor[0] = hexdec(substr($hexaColor, 0, 2));
+            $rgbColor[1] = hexdec(substr($hexaColor, 2, 2));
+            $rgbColor[2] = hexdec(substr($hexaColor, 4, 2));
+        }
+
+        return $rgbColor;
     }
 
     /**
@@ -226,14 +288,15 @@ class Identicon
      *
      * @param string  $string
      * @param integer $size
-     * @param string $hexaColor
+     * @param array of colors (hexa or rgb)
+     * @param string $color Background color (hexa or rgb)
      *
      * @return string
      */
-    public function getImageData($string, $size = 64, $hexaColor = null)
+    public function getImageData($string, $size = 64, $colors = array(),  $colorBackground = null )
     {
         ob_start();
-        $this->generateImage($string, $size, $hexaColor);
+        $this->generateImage($string, $size, $colors, $colorBackground);
         $imageData = ob_get_contents();
         ob_end_clean();
 
@@ -245,12 +308,13 @@ class Identicon
      *
      * @param string  $string
      * @param integer $size
-     * @param string $hexaColor
+     * @param array of colors (hexa or rgb)
+     * @param string $color Background color (hexa or rgb)
      *
      * @return string
      */
-    public function getImageDataUri($string, $size = 64, $hexaColor = null)
+    public function getImageDataUri($string, $size = 64, $colors = array(),  $colorBackground = null )
     {
-        return sprintf('data:image/png;base64,%s', base64_encode($this->getImageData($string, $size, $hexaColor)));
+        return sprintf('data:image/png;base64,%s', base64_encode($this->getImageData($string, $size, $colors, $colorBackground)));
     }
 }
