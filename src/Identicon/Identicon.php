@@ -13,10 +13,15 @@ class Identicon
    */
     const NB_OF_PIXELS = 5;
 
-  /**
-   * @var int The border ratio
-   */
+    /**
+     * @var int The border ratio
+     */
     const BORDER_RATIO = 0.2;
+
+    /**
+     * @var int Opacity
+     */
+    const OPACITY = 100;
 
     /**
      * @var string
@@ -172,7 +177,6 @@ class Identicon
     public function generateImage($string, $size, $colors = array(),  $colorBackground = null )
     {
         $this->setString($string);
-        //TODO: dicrease size by 10%
         $drawableSize = $size - (self::BORDER_RATIO * $size);
         $this->setSize($drawableSize);
 
@@ -206,7 +210,7 @@ class Identicon
         $containerImage = $this->imageCreateColor($size, $size, $colorBackground);
 
         $margin = ( $size - ( (1 - self::BORDER_RATIO) * $size) ) / 2;
-        imagecopymerge($containerImage, $image, $margin, $margin, 0, 0, $drawableSize, $drawableSize, 75);
+        imagecopymerge($containerImage, $image, $margin, $margin, 0, 0, $drawableSize, $drawableSize, self::OPACITY);
 
         return imagepng($containerImage);
 
