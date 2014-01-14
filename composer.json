@@ -1,5 +1,5 @@
 {
-    "name": "yzalis/identicon",
+    "name": "oz/identicon",
     "type": "library",
     "description": "Create awesome unique avatar.",
     "keywords": ["identicon", "avatar", "image"],
@@ -9,7 +9,10 @@
         {
             "name": "Benjamin Laugueux",
             "email": "benjamin@yzalis.com"
-        }
+        },
+        {
+            "name": "Sydney-o9"
+        },
     ],
     "require": {
         "php": ">=5.3.0"
